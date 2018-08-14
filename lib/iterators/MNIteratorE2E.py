@@ -12,6 +12,7 @@ from MNIteratorBase import MNIteratorBase
 from multiprocessing import Pool
 from data_utils.data_workers import anchor_worker, im_worker, chip_worker
 import math
+import pdb
 
 class MNIteratorE2E(MNIteratorBase):
     def __init__(self, roidb, config, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):
@@ -40,8 +41,10 @@ class MNIteratorE2E(MNIteratorBase):
         n_per_part = int(math.ceil(len(self.roidb) / float(self.cfg.TRAIN.CHIPS_DB_PARTS)))
         chips = []
         for i in range(self.cfg.TRAIN.CHIPS_DB_PARTS):
+            #pdb.set_trace()
             chips += self.pool.map(self.chip_worker.chip_extractor,
                                    self.roidb[i*n_per_part:min((i+1)*n_per_part, len(self.roidb))])
+            #chips += self.chip_worker.chip_extractor(self.roidb[0])
 
         chip_count = 0
         for i, r in enumerate(self.roidb):

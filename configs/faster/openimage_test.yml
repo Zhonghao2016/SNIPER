@@ -7,7 +7,6 @@
 MXNET_VERSION: "mxnet"
 output_path: "./output/sniper_res101_bn"
 symbol: resnet_mx_101_e2e
-#gpus: '0,1,2,3,4,5,6,7'
 gpus: '0'
 CLASS_AGNOSTIC: true
 default:
@@ -20,6 +19,8 @@ network:
   - 116.779
   - 123.68
   RPN_FEAT_STRIDE: 16
+  IMAGE_STRIDE: 0
+  RCNN_FEAT_STRIDE: 16
   FIXED_PARAMS:
   - conv0
   - bn0
@@ -30,21 +31,25 @@ network:
   - 1
   - 2
   ANCHOR_SCALES:
-  - 2
-  - 4
-  - 7
-  - 10
-  - 13
-  - 16
+  #- 2
+  #- 4
+  #- 7
+  #- 10
+  #- 13
+  #- 16
+  #- 24
+  - 3
+  - 6
+  - 12
   - 24
-  NUM_ANCHORS: 21
+  NUM_ANCHORS: 12
 dataset:
-  NUM_CLASSES: 602 #81
-  dataset: openimages #coco
-  dataset_path: "./data/openimages" #"./data/coco"
-  image_set: train #+val2014
+  NUM_CLASSES: 602
+  dataset: openimages
+  dataset_path: "./data/openimage"
+  image_set: train2014+val2014
   root_path: "./data"
-  test_image_set: validation #-dev2015
+  test_image_set: test # annotation file should be "image_info_test_challenge_2018.json"
   proposal: rpn
 TRAIN:
   ## CHIP GENERATION PARAMS
@@ -58,7 +63,7 @@ TRAIN:
   # Multi-processing params
   # These parameters are used for parallel chip generation, NMS, etc.
   # Please consider adjusting them for your system
-  NUM_PROCESS: 12
+  NUM_PROCESS: 64
   NUM_THREAD: 8
 
   # Whether to train with segmentation mask
@@ -97,7 +102,7 @@ TRAIN:
   # whether use OHEM
   ENABLE_OHEM: true
   # size of images for each device, 2 for rcnn, 1 for rpn and e2e
-  BATCH_IMAGES: 2
+  BATCH_IMAGES: 16
   # e2e changes behavior of anchor loader and metric
   END2END: true
   # R-CNN
@@ -171,7 +176,7 @@ TEST:
   # Number of concurrent jobs used for inference
   # if greater than 1, the roidb is distributed over
   # concurrent jobs to increase throughput
-  CONCURRENT_JOBS: 1
+  CONCURRENT_JOBS: 2
 
   # Ranges to specify valid proposal length
   # in each of the test scale, square area
@@ -202,13 +207,13 @@ TEST:
   NMS_SIGMA: 0.55
 
   # Which epoch of the training be used for testing
-  TEST_EPOCH: 7
+  TEST_EPOCH: 0
 
   # VISUALIZATION CONFIG
   VISUALIZATION_PATH: './debug/visualization'
   # Whether to visualize all intermediate scales
   # before aggregation (when doing multi-scale inference)
-  # If False, only final detections are saved to 
+  # If False, only final detections are saved to
   # VISUALIZATION_PATH
   VISUALIZE_INTERMEDIATE_SCALES: True
 

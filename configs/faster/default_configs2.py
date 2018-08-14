@@ -1,24 +1,29 @@
-# --------------------------------------------------------------
-# SNIPER: Efficient Multi-Scale Training
+# --------------------------------------------------------
+# Deformable Convolutional Networks
+# Copyright (c) 2016 by Contributors
+# Copyright (c) 2017 Microsoft
 # Licensed under The Apache-2.0 License [see LICENSE for details]
-# by Mahyar Najibi
-# --------------------------------------------------------------
+# Modified by Yuwen Xiong, Bin Xiao
+# --------------------------------------------------------
 
 import yaml
 import numpy as np
 from easydict import EasyDict as edict
-import pdb
 
 config = edict()
-config.proposal_path = 'data/proposals'
+config.proposal_path = 'proposals'
+config.startMSTR = 9
+config.mstr = False
 config.MXNET_VERSION = ''
-
 config.output_path = ''
 config.symbol = ''
 config.gpus = ''
 config.CLASS_AGNOSTIC = True
+config.SCALES = [(600, 1000)]  # first is scale (the shorter side); second is max size
+config.IS_DPN = False
 # default training
 config.default = edict()
+config.default.frequent = 20
 config.default.kvstore = 'device'
 
 # network related params
@@ -26,8 +31,11 @@ config.network = edict()
 config.network.pretrained = ''
 config.network.pretrained_epoch = 0
 config.network.PIXEL_MEANS = np.array([0, 0, 0])
+config.network.IMAGE_STRIDE = 0
 config.network.RPN_FEAT_STRIDE = 16
+config.network.RCNN_FEAT_STRIDE = 16
 config.network.FIXED_PARAMS = ['gamma', 'beta']
+config.network.FIXED_PARAMS_SHARED = ['gamma', 'beta']
 config.network.ANCHOR_SCALES = (8, 16, 32)
 config.network.ANCHOR_RATIOS = (0.5, 1, 2)
 config.network.NUM_ANCHORS = len(config.network.ANCHOR_SCALES) * len(config.network.ANCHOR_RATIOS)
@@ -43,17 +51,11 @@ config.dataset.NUM_CLASSES = 21
 
 
 config.TRAIN = edict()
-config.TRAIN.CPP_CHIPS = False
-config.TRAIN.USE_NEG_CHIPS = False #True
-config.TRAIN.CHIPS_DB_PARTS = 20
-config.TRAIN.WITH_MASK = False
-config.TRAIN.lr = 0
-config.TRAIN.VALID_RANGES = ((-1, 80), (32, 150), (120, -1))
-config.TRAIN.SCALES = (3.0, 1.667, 512.0)
 
+config.TRAIN.lr = 0
 config.TRAIN.lr_step = ''
 config.TRAIN.scale = 1.0
-config.TRAIN.lr_factor = 0.1
+config.TRAIN.lr_factor = 0.2
 config.TRAIN.warmup = False
 config.TRAIN.warmup_lr = 0
 config.TRAIN.warmup_step = 0
@@ -84,6 +86,8 @@ config.TRAIN.ALTERNATE.rpn3_lr = 0
 config.TRAIN.ALTERNATE.rpn3_lr_step = ''    # recommend '2'
 config.TRAIN.ALTERNATE.rpn3_epoch = 0       # recommend 3
 
+# whether resume training
+config.TRAIN.RESUME = False
 # whether flip image
 config.TRAIN.FLIP = True
 # whether shuffle image
@@ -94,7 +98,8 @@ config.TRAIN.ENABLE_OHEM = False
 config.TRAIN.BATCH_IMAGES = 2
 # e2e changes behavior of anchor loader and metric
 config.TRAIN.END2END = False
-
+# group images with similar aspect ratio
+config.TRAIN.ASPECT_GROUPING = True
 
 # R-CNN
 # rcnn rois batch size
@@ -108,8 +113,7 @@ config.TRAIN.BG_THRESH_LO = 0.0
 # rcnn bounding box regression params
 config.TRAIN.BBOX_REGRESSION_THRESH = 0.5
 config.TRAIN.BBOX_WEIGHTS = np.array([1.0, 1.0, 1.0, 1.0])
-config.TRAIN.visualization_path = 'debug/visualization'
-config.TRAIN.visualization_freq= 100
+
 # RPN anchor loader
 # rpn anchors batch size
 config.TRAIN.RPN_BATCH_SIZE = 256
@@ -191,25 +195,23 @@ def update_config(config_file):
             else:
                 raise ValueError("key must exist in config.py")
 
-
-def update_config_from_list(cfg_list):
-    """Set config keys via list (e.g., from command line)."""
-    from ast import literal_eval
-    assert len(cfg_list) % 2 == 0
-    for k, v in zip(cfg_list[0::2], cfg_list[1::2]):
-        key_list = k.split('.')
-        d = config
-        for subkey in key_list[:-1]:
-            assert d.has_key(subkey)
-            d = d[subkey]
-        subkey = key_list[-1]
-        assert d.has_key(subkey)
-        try:
-            value = literal_eval(v)
-        except:
-            # handle the case when v is a string literal
-            value = v
-        assert type(value) == type(d[subkey]), \
-            'type {} does not match original type {}'.format(
-                type(value), type(d[subkey]))
-        d[subkey] = value
+def get_opt_params(cfg,db_len):
+    base_lr = cfg.TRAIN.lr
+    lr_step = cfg.TRAIN.lr_step
+    lr_factor = cfg.TRAIN.lr_factor
+    begin_epoch = cfg.TRAIN.begin_epoch
+    batch_size = cfg.TRAIN.BATCH_IMAGES
+    lr_epoch = [float(epoch) for epoch in lr_step.split(',')]
+    lr_epoch_diff = [epoch - begin_epoch for epoch in lr_epoch if epoch > begin_epoch]
+    lr = base_lr * (lr_factor ** (len(lr_epoch) - len(lr_epoch_diff)))
+    lr_iters = [int(epoch * db_len / batch_size) for epoch in lr_epoch_diff]
+    print('lr', lr, 'lr_epoch_diff', lr_epoch_diff, 'lr_iters', lr_iters)
+    lr_scheduler = WarmupMultiFactorScheduler(lr_iters, lr_factor, cfg.TRAIN.warmup, cfg.TRAIN.warmup_lr, cfg.TRAIN.warmup_step)
+    # optimizer
+    optimizer_params = {'momentum': cfg.TRAIN.momentum,
+                        'wd': cfg.TRAIN.wd,
+                        'learning_rate': lr,
+                        'lr_scheduler': lr_scheduler,
+                        'rescale_grad': 1.0,
+                        'clip_gradient': None}
+    return optimizer_params

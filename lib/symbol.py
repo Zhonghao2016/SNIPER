@@ -1,11 +1,10 @@
-# ---------------------------------------------------------------
-# SNIPER: Efficient Multi-scale Training
+# --------------------------------------------------------
+# Deformable Convolutional Networks
+# Copyright (c) 2017 Microsoft
 # Licensed under The Apache-2.0 License [see LICENSE for details]
-# Modified from https://github.com/msracver/Deformable-ConvNets
-# Modified by Mahyar Najibi
-# ---------------------------------------------------------------
+# Written by Yuwen Xiong
+# --------------------------------------------------------
 
-import pdb
 import numpy as np
 class Symbol:
     def __init__(self):

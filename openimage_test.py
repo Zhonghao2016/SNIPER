@@ -8,7 +8,8 @@ import init
 import matplotlib
 matplotlib.use('Agg')
 from symbols.faster import *
-from configs.faster.default_configs import config, update_config, update_config_from_list
+#from configs.faster.default_configs import config, update_config, update_config_from_list
+from configs.faster.default_configs2 import config, update_config
 from data_utils.load_data import load_proposal_roidb
 import mxnet as mx
 import argparse
@@ -18,12 +19,14 @@ from inference import imdb_proposal_extraction_wrapper
 import os
 import pdb
 
+#from symbols.faster import resnet_mx_101_e2e_openimage
+
 def parser():
     arg_parser = argparse.ArgumentParser('SNIPER test module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
-    							default='configs/faster/sniper_res101_e2e.yml',type=str)
+    							default='configs/faster/openimage_test.yml',type=str)
     arg_parser.add_argument('--save_prefix', dest='save_prefix', help='Prefix used for snapshotting the network',
-                            default='SNIPER', type=str)
+                            default='resnet_mx_101_open', type=str)
     arg_parser.add_argument('--vis', dest='vis', help='Whether to visualize the detections',
                             action='store_true')
     arg_parser.add_argument('--set', dest='set_cfg_list', help='Set the configuration fields from command line',
@@ -55,7 +58,9 @@ def main():
     model_prefix = os.path.join(output_path, args.save_prefix)
     arg_params, aux_params = load_param(model_prefix, config.TEST.TEST_EPOCH,
                                         convert=True, process=True)
-
+    #for item in arg_params.keys():
+    #    print(item, arg_params[item].shape)
+    #pdb.set_trace()
     sym_inst = eval('{}.{}'.format(config.symbol, config.symbol))
     if config.TEST.EXTRACT_PROPOSALS:
         imdb_proposal_extraction_wrapper(sym_inst, config, imdb, roidb, context, arg_params, aux_params, args.vis)

@@ -2,13 +2,14 @@ import mxnet as mx
 import numpy as np
 from data_utils.data_workers import im_worker
 from MNIteratorBase import MNIteratorBase
+import pdb
 
 class MNIteratorTest(MNIteratorBase):
     def __init__(self, roidb, config, test_scale, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512),
                  num_classes=None):
         self.crop_size = crop_size
-
-        self.num_classes = num_classes if num_classes else roidb[0]['gt_overlaps'].shape[1]
+        self.num_classes = num_classes if num_classes else roidb[0]['crowd'].shape[1]
+        # self.num_classes = num_classes if num_classes else roidb[0]['gt_overlaps'].shape[1]
         self.data_name = ['data', 'im_info', 'im_ids']
         self.label_name = None
         self.label = []

@@ -17,7 +17,7 @@ from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
 from iterators.MNIteratorTest import MNIteratorTest
 import mxnet as mx
-
+import pdb
 
 class Tester(object):
     def __init__(self, module, imdb, roidb, test_iter, cfg, rcnn_output_names=None,rpn_output_names=None,
@@ -185,16 +185,18 @@ class Tester(object):
                         keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                         all_boxes[j][i] = all_boxes[j][i][keep, :]
             if vis:
+                #pdb.set_trace()
                 visualization_path = vis_path if vis_path else os.path.join(self.cfg.TEST.VISUALIZATION_PATH,
                                                                             cache_name)
                 if not os.path.isdir(visualization_path):
                     os.makedirs(visualization_path)
                 import cv2
                 im = cv2.cvtColor(cv2.imread(self.roidb[i]['image']), cv2.COLOR_BGR2RGB)
+                #pdb.set_trace()
                 visualize_dets(im,
                                [[]] + [all_boxes[j][i] for j in range(1, self.num_classes)],
                                1.0,
-                               self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
+                               self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.01,
                                save_path=os.path.join(visualization_path, '{}{}'.format(vis_name if vis_name else i,
                                                                                          vis_ext)), transform=False)
 
@@ -259,6 +261,7 @@ class Tester(object):
                         for j in range(1, self.num_classes):
                             keep = np.where(all_boxes[j][im_id][:, -1] >= image_thresh)[0]
                             all_boxes[j][im_id] = all_boxes[j][im_id][keep, :]
+
                 if vis:
                     if not os.path.isdir(visualization_path):
                         os.makedirs(visualization_path)
@@ -330,7 +333,18 @@ def detect_scale_worker(arguments):
     print('Performing inference for scale: {}'.format(scale))
     nGPUs= len(context)
     sym_inst = sym_def(n_proposals=400, test_nbatch=nbatch)
+    #sym_inst = sym_def(n_proposals=400)
     sym = sym_inst.get_symbol_rcnn(config, is_train=False)
+    #sym = sym_inst.get_symbol_rcnn(config, is_train=True)
+    '''
+    mx.visualization.print_summary( sym, shape={"data":(2L, 3L, 1400L, 2000L), 'im_info': (2L, 3L), 'im_ids': (2L,)})
+    for item in arg_params.keys():
+        print(arg_params[item].shape)
+    print('\n\n')
+    for item in aux_params.keys():
+        print(aux_params[item])
+    pdb.set_trace()
+    '''
     test_iter = MNIteratorTest(roidb=roidb, config=config, batch_size=nGPUs * nbatch, nGPUs=nGPUs, threads=32,
                                pad_rois_to=400, crop_size=None, test_scale=scale)
     # Create the module
@@ -340,7 +354,9 @@ def detect_scale_worker(arguments):
                         context=context,
                         data_names=[k[0] for k in test_iter.provide_data_single],
                         label_names=None)
+    #pdb.set_trace()
     mod.bind(test_iter.provide_data, test_iter.provide_label, for_training=False)
+
     mod.init_params(arg_params=arg_params, aux_params=aux_params)
     # Create Tester
     tester = Tester(mod, imdb, roidb, test_iter, cfg=config, batch_size=nbatch)

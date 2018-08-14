@@ -24,6 +24,7 @@ from iterators.PrefetchingIter import PrefetchingIter
 from data_utils.load_data import load_proposal_roidb, merge_roidb, filter_roidb
 from bbox.bbox_regression import add_bbox_regression_targets
 import argparse
+import pdb
 
 def parser():
     arg_parser = argparse.ArgumentParser('SNIPER training module')
@@ -41,6 +42,10 @@ def parser():
 
 
 if __name__ == '__main__':
+    # only need to change here, the output class sequence in the output layer follows this one exactly
+    classes = ['__background__',
+               'Mango' # '/m/0fldg'  
+                ]
 
     args = parser()
     update_config(args.cfg)
@@ -60,9 +65,8 @@ if __name__ == '__main__':
         config.dataset.dataset_path,
         proposal=config.dataset.proposal, append_gt=True, flip=config.TRAIN.FLIP,
         result_path=config.output_path,
-        proposal_path=config.proposal_path, load_mask=config.TRAIN.WITH_MASK, only_gt=not config.TRAIN.USE_NEG_CHIPS)
+        proposal_path=config.proposal_path, load_mask=config.TRAIN.WITH_MASK, only_gt=not config.TRAIN.USE_NEG_CHIPS, classes=classes)
         for image_set in image_sets]
-
     roidb = merge_roidb(roidbs)
     roidb = filter_roidb(roidb, config)
     bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
@@ -70,6 +74,7 @@ if __name__ == '__main__':
 
 
     print('Creating Iterator with {} Images'.format(len(roidb)))
+    #pdb.set_trace()
     train_iter = MNIteratorE2E(roidb=roidb, config=config, batch_size=batch_size, nGPUs=nGPUs,
                                threads=config.TRAIN.NUM_THREAD, pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))
@@ -80,7 +85,7 @@ if __name__ == '__main__':
     # get list of fixed parameters
     print('Initializing the model...')
     sym_inst = eval('{}.{}'.format(config.symbol, config.symbol))(n_proposals=400, momentum=args.momentum)
-    sym = sym_inst.get_symbol_rcnn(config)
+    sym = sym_inst.get_symbol_rcnn(config, num_classes=len(classes))
 
     fixed_param_names = get_fixed_param_names(config.network.FIXED_PARAMS, sym)
 

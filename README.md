@@ -4,6 +4,24 @@
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/sniper.gif" />
  </p>
 
+This repo is used for training and testing models on openimage manually selected classes (I used one class Mango for simplicity in the code). 
+Follow the installation steps. and make the ./data/openimages directory following this structure:
+data
+  -openimages
+    -annotations
+      -(download from openimage v4 website https://storage.googleapis.com/openimages/web/download.html)
+    -images
+      -train
+      -test
+      -validation
+      -test_image_2018
+download openimage pretrained weights and store the file into "./data/pretrained_model/resnet_mx_101_open"
+To train selected classes, please modify the first several lines in the main() function in main_train.py
+To test the trained model, please modify the first several lines in the main() function in demo.py
+You can visualize the output images by modifying "vis=True" in the "tester.aggregate" function in demo.py
+The output bbox prediction file will be stored in ./test_output. In ./test_output, I also write some messy functions to format and analyze the output bbox prediction file. Have fun playing with it.
+
+
 SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentation. 
 Instead of processing all pixels in an image pyramid, SNIPER selectively processes context regions around the ground-truth objects (a.k.a *chips*).
 This significantly speeds up multi-scale training as it operates on low-resolution chips. 

@@ -10,6 +10,9 @@ import cPickle
 import gc
 from dataset import *
 
+from dataset.openimages import openimages
+import pdb
+
 def load_gt_roidb(dataset_name, image_set_name, root_path, dataset_path, result_path=None,
                   flip=False):
     """ load ground truth roidb """
@@ -22,9 +25,11 @@ def load_gt_roidb(dataset_name, image_set_name, root_path, dataset_path, result_
 
 def load_proposal_roidb(dataset_name, image_set_name, root_path, dataset_path, result_path=None,
                         proposal='rpn', append_gt=True, flip=False,proposal_path='proposals', only_gt=False,
-                        get_imdb=False, load_mask=False):
+                        get_imdb=False, load_mask=False, classes=None):
     """ load proposal roidb (append_gt when training) """
-    imdb = eval(dataset_name)(image_set_name, root_path, dataset_path, result_path,load_mask=load_mask)
+    # imdb = eval(dataset_name)(image_set_name, root_path, dataset_path, result_path,load_mask=load_mask)
+    
+    imdb = eval(dataset_name)(image_set_name, root_path, dataset_path, result_path, classes=classes)
 
     roidb = imdb.gt_roidb()
     if not only_gt:
